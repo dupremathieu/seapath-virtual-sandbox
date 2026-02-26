@@ -1,0 +1,157 @@
+# Ansible inventory for the SEAPATH virtual sandbox (3-node QEMU/KVM cluster).
+# IPs and interface names match the Terraform configuration in sandbox/terraform/.
+# Copy sandbox/terraform.tfvars.example to sandbox/terraform/terraform.tfvars and
+# run "make apply" before using this inventory.
+
+---
+all:
+  hosts:
+    node1:
+      ansible_host: 192.168.100.101
+      network_interface: enp3s0  # Admin interface (slot 0x03). Use eth0 for Yocto.
+
+    node2:
+      ansible_host: 192.168.100.102
+      network_interface: enp3s0
+
+    node3:
+      ansible_host: 192.168.100.103
+      network_interface: enp3s0
+
+  vars:
+    # Debian specific — remove if using Yocto
+    admin_user: admin
+
+    # Admin network (libvirt NAT — gateway is first address of the subnet)
+    gateway_addr: "192.168.100.1"
+    dns_servers: "192.168.100.1"
+    subnet: 24
+    ntp_servers:
+      - "185.254.101.25"
+
+    # SEAPATH Ansible connection settings
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    ansible_user: ansible
+    ip_addr: "{{ ansible_host }}"
+    hostname: "{{ inventory_hostname }}"
+    apply_network_config: true
+
+# All three nodes are hypervisors
+hypervisors:
+  hosts:
+    node1:
+    node2:
+    node3:
+  vars:
+    isolcpus: ""  # No CPU isolation in the sandbox
+    livemigration_user: libvirtadmin
+
+# No observers in the sandbox
+observers:
+  hosts:
+
+# Cluster ring topology wiring (OVS RSTP)
+# seapath-cluster-12: node1 NIC2 (team0_0) ↔ node2 NIC3 (team0_1)
+# seapath-cluster-23: node2 NIC2 (team0_0) ↔ node3 NIC3 (team0_1)
+# seapath-cluster-31: node3 NIC2 (team0_0) ↔ node1 NIC3 (team0_1)
+cluster_machines:
+  hosts:
+    node1:
+      team0_0: "enp4s0"        # NIC2: connected to node2 via seapath-cluster-12. Use eth1 for Yocto.
+      team0_1: "enp5s0"        # NIC3: connected to node3 via seapath-cluster-31. Use eth2 for Yocto.
+      cluster_ip_addr: "192.168.55.1"
+      cluster_next_ip_addr: "192.168.55.2"
+      cluster_previous_ip_addr: "192.168.55.3"
+
+    node2:
+      team0_0: "enp4s0"        # NIC2: connected to node3 via seapath-cluster-23. Use eth1 for Yocto.
+      team0_1: "enp5s0"        # NIC3: connected to node1 via seapath-cluster-12. Use eth2 for Yocto.
+      cluster_ip_addr: "192.168.55.2"
+      cluster_next_ip_addr: "192.168.55.3"
+      cluster_previous_ip_addr: "192.168.55.1"
+
+    node3:
+      team0_0: "enp4s0"        # NIC2: connected to node1 via seapath-cluster-31. Use eth1 for Yocto.
+      team0_1: "enp5s0"        # NIC3: connected to node2 via seapath-cluster-23. Use eth2 for Yocto.
+      cluster_ip_addr: "192.168.55.3"
+      cluster_next_ip_addr: "192.168.55.1"
+      cluster_previous_ip_addr: "192.168.55.2"
+      br_rstp_priority: 12288  # Do not modify, used by RSTP
+
+# Ceph monitors — all cluster nodes
+mons:
+  hosts:
+    node1:
+    node2:
+    node3:
+  vars:
+    ceph_origin: distro
+    cluster_network: "192.168.55.0/24"
+    public_network: "{{ cluster_network }}"
+    monitor_address: "{{ cluster_ip_addr }}"
+    configure_firewall: false
+    ntp_service_enabled: false
+    dashboard_enabled: false
+    ceph_conf_overrides:
+      global:
+        osd_pool_default_size: "{{ groups['hypervisors'] | length }}"
+        osd_pool_default_min_size: 1
+        osd_pool_default_pg_num: 128
+        osd_pool_default_pgp_num: 128
+        osd_crush_chooseleaf_type: 1
+        mon_osd_min_down_reporters: 1
+      mon:
+        auth_allow_insecure_global_id_reclaim: false
+      osd:
+        # Reduced from 8 GiB to 4 GiB for sandbox VMs
+        osd memory target: 4294967296
+
+# Ceph OSDs — virtio disk is always /dev/vdb in QEMU guests
+osds:
+  hosts:
+    node1:
+      ceph_osd_disk: "/dev/vdb"
+    node2:
+      ceph_osd_disk: "/dev/vdb"
+    node3:
+      ceph_osd_disk: "/dev/vdb"
+  vars:
+    devices: "{{ ceph_osd_disk }}"
+
+# Ceph clients — all cluster nodes
+clients:
+  hosts:
+    node1:
+    node2:
+    node3:
+  vars:
+    user_config: true
+    rbd:
+      name: "rbd"
+      application: "rbd"
+      pg_autoscale_mode: on
+      target_size_ratio: 1
+    pools:
+      - "{{ rbd }}"
+    keys:
+      - name: client.libvirt
+        caps:
+          mon: 'profile rbd, allow command "osd blacklist"'
+          osd: "allow class-read object_prefix rbd_children, profile rbd pool=rbd"
+        mode: "{{ ceph_keyring_permissions }}"
+
+# Empty groups required by ceph-ansible to suppress warnings
+grafana-server:
+iscsigws:
+iscsi-gws:
+mdss:
+mgrs:
+nfss:
+rbdmirrors:
+rgwloadbalancers:
+rgws:
+standalone_machine:
+
+...

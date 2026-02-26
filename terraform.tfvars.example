@@ -1,0 +1,24 @@
+# Copy this file to sandbox/terraform/terraform.tfvars and edit as needed.
+# Only base_image_path is required — all other variables have sensible defaults.
+
+# Path to your SEAPATH qcow2 image.
+# The image must have an 'ansible' user with your SSH public key pre-authorized.
+base_image_path = "/path/to/seapath-image.qcow2"
+
+# --- Optional overrides ---
+
+# libvirt_uri = "qemu:///system"      # Use "qemu+ssh://user@host/system" for remote libvirt
+# libvirt_pool = "default"            # Storage pool name
+
+# node_memory_mib = 4096              # RAM per node in MiB (minimum 4096)
+# node_vcpu       = 4                 # vCPUs per node
+
+# osd_disk_size_bytes = 21474836480   # Ceph OSD disk size (default: 20 GiB)
+
+# --- Yocto images ---
+# Yocto uses eth0/eth1/eth2 instead of enp3s0/enp4s0/enp5s0.
+# Also update the interface names in inventory/seapath-sandbox.yaml.
+#
+# iface_admin     = "eth0"
+# iface_cluster_a = "eth1"
+# iface_cluster_b = "eth2"
