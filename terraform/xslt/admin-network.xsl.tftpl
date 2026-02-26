@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Injects DHCP host reservations into the libvirt admin network XML.
+  Rendered by Terraform templatefile() — variables: nodes (list of {mac, ip, name}).
+-->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <!-- Identity transform: copy everything unchanged -->
+  <xsl:template match="@*|node()">
+    <xsl:copy>
+      <xsl:apply-templates select="@*|node()"/>
+    </xsl:copy>
+  </xsl:template>
+
+  <!-- Append <host> entries inside <dhcp> for MAC→IP reservations -->
+  <xsl:template match="dhcp">
+    <xsl:copy>
+      <xsl:apply-templates select="@*|node()"/>
+%{ for node in nodes ~}
+      <host mac="${node.mac}" name="${node.name}" ip="${node.ip}"/>
+%{ endfor ~}
+    </xsl:copy>
+  </xsl:template>
+
+</xsl:stylesheet>
