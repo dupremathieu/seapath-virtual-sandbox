@@ -90,6 +90,7 @@ mons:
     ceph_origin: distro
     cluster_network: "192.168.55.0/24"
     public_network: "{{ cluster_network }}"
+    cephadm_network: "{{ cluster_network }}"
     monitor_address: "{{ cluster_ip_addr }}"
     configure_firewall: false
     ntp_service_enabled: false
