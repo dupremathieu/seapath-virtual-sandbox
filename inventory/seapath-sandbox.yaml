@@ -37,6 +37,7 @@ all:
     ip_addr: "{{ ansible_host }}"
     hostname: "{{ inventory_hostname }}"
     apply_network_config: true
+    cephadm_pullimages: true
 
 # All three nodes are hypervisors
 hypervisors:
