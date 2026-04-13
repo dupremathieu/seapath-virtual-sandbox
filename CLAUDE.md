@@ -12,6 +12,8 @@ SEAPATH Virtual Sandbox provisions a 3-node SEAPATH cluster on QEMU/KVM for loca
 .
 ├── Makefile                      # Convenience targets for Terraform and Ansible
 ├── README.md
+├── .cqfdrc                       # cqfd flavors (containerised workflow)
+├── .cqfd/docker/Dockerfile       # Debian 12 + terraform + ansible 2.16 + libvirt-clients
 ├── terraform.tfvars.example      # Copy to terraform/terraform.tfvars and edit
 ├── terraform/
 │   ├── providers.tf              # Terraform + dmacvicar/libvirt ~0.8
@@ -71,6 +73,24 @@ make ansible-setup           # full setup via seapath_setup_main.yaml
 ```bash
 make destroy
 ```
+
+## Containerised workflow (cqfd)
+
+`.cqfdrc` defines flavors so the host only needs `libvirtd` + Docker/Podman.
+The container image (`.cqfd/docker/Dockerfile`) ships Terraform, ansible-core
+2.16, `libvirt-clients`, and the Python deps required by the SEAPATH ansible
+repo's `prepare.sh`.
+
+Flavors:
+- `terraform` — `terraform init && terraform apply -auto-approve`
+- `ansible` — clones `${ANSIBLE_URL:-seapath/ansible}` to `${ANSIBLE_REPO:-./ansible}`, checks out `${ANSIBLE_REF:-main}`, runs `prepare.sh`
+- `apply` / `destroy` / `setup` / `ping` — wrap the matching Make targets
+
+The shared `docker_run_args` mount the libvirt socket, `/var/lib/libvirt/images`,
+and `~/.ssh` (read-only), all with `:z` SELinux labels, and use `--network host`
+so the container can reach the admin NAT. Because cqfd only mounts the project
+directory, the ansible repo defaults to `./ansible` (also the Makefile default)
+rather than `../ansible`.
 
 ## Linting / Validation
 

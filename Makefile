@@ -2,8 +2,8 @@ TERRAFORM_DIR := terraform
 INVENTORY     := inventory/seapath-sandbox.yaml
 
 # Path to a local clone of https://github.com/seapath/ansible.git
-# Default: sibling directory (../ansible). Override with ANSIBLE_REPO=<path>.
-ANSIBLE_REPO  ?= ../ansible
+# Default: ./ansible (cqfd-friendly). Override with ANSIBLE_REPO=<path>.
+ANSIBLE_REPO  ?= ./ansible
 PLAYBOOKS      = $(ANSIBLE_REPO)/playbooks
 
 # Extra ansible-playbook flags (e.g. ANSIBLE_OPTS="--check -v")

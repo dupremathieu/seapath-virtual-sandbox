@@ -42,6 +42,28 @@ The Makefile expects the SEAPATH Ansible repo at `../ansible` by default. Overri
 make ansible-setup ANSIBLE_REPO=/path/to/ansible
 ```
 
+## Containerised workflow with cqfd
+
+If you prefer not to install Terraform and Ansible on the host, a
+[`cqfd`](https://github.com/savoirfairelinux/cqfd) wrapper is provided. Only
+`libvirtd` and Docker (or Podman) need to be installed locally — every other
+dependency runs in the container defined under `.cqfd/docker/`.
+
+```bash
+cqfd init                  # build the container image
+cqfd -b ansible            # clone seapath/ansible into ./ansible and run prepare.sh
+cqfd -b terraform          # terraform init + apply
+cqfd -b ping               # ansible ping
+cqfd -b setup              # full SEAPATH setup
+cqfd -b destroy            # tear everything down
+```
+
+The container bind-mounts the libvirt socket, `/var/lib/libvirt/images`, and
+your `~/.ssh` directory (read-only), and uses host networking to reach the
+admin NAT (`192.168.100.0/24`). Override the ansible repo location/ref via
+`ANSIBLE_REPO`, `ANSIBLE_URL`, or `ANSIBLE_REF` environment variables before
+calling `cqfd -b ansible`.
+
 ## Network Design
 
 ### Admin network (`seapath-sandbox-admin`)

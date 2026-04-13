@@ -3,6 +3,7 @@
 /terraform/terraform.tfstate
 /terraform/terraform.tfstate.backup
 /terraform/terraform.tfvars
+/ansible/
 *.qcow2
 *.wic
 *.raw

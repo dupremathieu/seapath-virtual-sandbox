@@ -1,0 +1,37 @@
+[project]
+org='seapath'
+name='virtual-sandbox'
+flavors='terraform ansible apply destroy setup ping'
+
+# Shared docker run args:
+#   - libvirt socket for terraform/virsh
+#   - SSH agent + keys for ansible to reach the VMs
+#   - libvirt storage pool path so paths resolve identically inside the container
+#   - host network so we can reach the 192.168.100.0/24 admin NAT
+[build]
+docker_run_args="--network host \
+                 -v /var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock:z \
+                 -v /var/lib/libvirt/images:/var/lib/libvirt/images:z \
+                 -v ${HOME}/.ssh:/root/.ssh:ro,z"
+user_extra_groups='libvirt'
+command='cd terraform && terraform fmt -check && terraform validate'
+
+[terraform]
+command='cd terraform && terraform init && terraform apply -auto-approve'
+
+[ansible]
+# Clone the SEAPATH ansible repo into ./ansible and run its prepare.sh.
+# Override via ANSIBLE_REPO / ANSIBLE_URL / ANSIBLE_REF env vars.
+command='./.cqfd/ansible-prepare.sh'
+
+[apply]
+command='make apply'
+
+[destroy]
+command='make destroy'
+
+[setup]
+command='make ansible-setup'
+
+[ping]
+command='make ansible-ping'
