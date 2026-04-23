@@ -76,6 +76,9 @@ resource "libvirt_domain" "node" {
           }
         }
         model = { type = "virtio" }
+        # Match guest OVS team0 MTU; libvirt can't set mtu on bridge-mode
+        # networks, so it must be declared per-interface on the domain.
+        mtu = { size = 9000 }
       },
       {
         source = {
@@ -84,6 +87,7 @@ resource "libvirt_domain" "node" {
           }
         }
         model = { type = "virtio" }
+        mtu   = { size = 9000 }
       },
     ]
 
