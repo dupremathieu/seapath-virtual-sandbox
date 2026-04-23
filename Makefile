@@ -71,13 +71,13 @@ snapshot-delete:
 
 ## Node access
 ssh-node1:
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ansible@192.168.100.101
+	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t admin@192.168.100.101 sudo -s
 
 ssh-node2:
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ansible@192.168.100.102
+	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t admin@192.168.100.102 sudo -s
 
 ssh-node3:
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ansible@192.168.100.103
+	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t admin@192.168.100.103 sudo -s
 
 console-node1:
 	$(VIRSH) console seapath-node1
