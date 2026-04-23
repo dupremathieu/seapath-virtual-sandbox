@@ -8,15 +8,15 @@ all:
   hosts:
     node1:
       ansible_host: 192.168.100.101
-      network_interface: enp0s3  # Admin interface (slot 0x03)
+      network_interface: enp1s0  # Admin interface (first NIC, q35 pcie-root-port)
 
     node2:
       ansible_host: 192.168.100.102
-      network_interface: enp0s3
+      network_interface: enp1s0
 
     node3:
       ansible_host: 192.168.100.103
-      network_interface: enp0s3
+      network_interface: enp1s0
 
   vars:
     # Debian specific — remove if using Yocto
@@ -60,22 +60,22 @@ observers:
 cluster_machines:
   hosts:
     node1:
-      team0_0: "enp0s4"        # NIC2: connected to node2 via seapath-cluster-12
-      team0_1: "enp0s5"        # NIC3: connected to node3 via seapath-cluster-31
+      team0_0: "enp2s0"        # NIC2: connected to node2 via seapath-cluster-12
+      team0_1: "enp3s0"        # NIC3: connected to node3 via seapath-cluster-31
       cluster_ip_addr: "192.168.55.1"
       cluster_next_ip_addr: "192.168.55.2"
       cluster_previous_ip_addr: "192.168.55.3"
 
     node2:
-      team0_0: "enp0s4"        # NIC2: connected to node3 via seapath-cluster-23
-      team0_1: "enp0s5"        # NIC3: connected to node1 via seapath-cluster-12
+      team0_0: "enp2s0"        # NIC2: connected to node3 via seapath-cluster-23
+      team0_1: "enp3s0"        # NIC3: connected to node1 via seapath-cluster-12
       cluster_ip_addr: "192.168.55.2"
       cluster_next_ip_addr: "192.168.55.3"
       cluster_previous_ip_addr: "192.168.55.1"
 
     node3:
-      team0_0: "enp0s4"        # NIC2: connected to node1 via seapath-cluster-31
-      team0_1: "enp0s5"        # NIC3: connected to node2 via seapath-cluster-23
+      team0_0: "enp2s0"        # NIC2: connected to node1 via seapath-cluster-31
+      team0_1: "enp3s0"        # NIC3: connected to node2 via seapath-cluster-23
       cluster_ip_addr: "192.168.55.3"
       cluster_next_ip_addr: "192.168.55.1"
       cluster_previous_ip_addr: "192.168.55.2"

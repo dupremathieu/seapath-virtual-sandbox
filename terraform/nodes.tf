@@ -19,21 +19,26 @@ locals {
 }
 
 resource "libvirt_domain" "node" {
-  count  = 3
-  name   = "seapath-node${count.index + 1}"
-  type   = "kvm"
+  count       = 3
+  name        = "seapath-node${count.index + 1}"
+  type        = "kvm"
   memory      = var.node_memory_gib
   memory_unit = "GiB"
   vcpu        = var.node_vcpu
+
+  cpu = {
+    mode = "host-passthrough"
+  }
 
   features = {
     acpi = true
   }
 
   os = {
-    type      = "hvm"
-    type_arch = "x86_64"
-    firmware  = "efi"
+    type         = "hvm"
+    type_arch    = "x86_64"
+    type_machine = "q35"
+    firmware     = "efi"
     firmware_info = {
       features = [
         { name = "enrolled-keys", enabled = "no" },
