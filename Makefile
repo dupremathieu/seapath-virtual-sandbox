@@ -20,6 +20,9 @@ NODES := seapath-node1 seapath-node2 seapath-node3
 # Host OVS bridges backing the cluster ring segments
 OVS_BRIDGES := ovs-ring12 ovs-ring23 ovs-ring31
 
+# Libvirt networks used by the VMs
+NETWORKS := seapath-sandbox-admin seapath-cluster-12 seapath-cluster-23 seapath-cluster-31
+
 # Snapshot name (override with SNAPSHOT=<name>)
 SNAPSHOT ?= default
 
@@ -66,6 +69,10 @@ ovs-teardown:
 
 ## VM lifecycle
 start:
+	@for net in $(NETWORKS); do \
+		echo "Starting network $$net..."; \
+		$(VIRSH) net-start $$net 2>/dev/null || true; \
+	done
 	@for node in $(NODES); do echo "Starting $$node..."; $(VIRSH) start $$node; done
 
 stop:
