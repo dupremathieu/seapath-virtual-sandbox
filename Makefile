@@ -146,7 +146,7 @@ ansible-setup-network:
 	cd $(ANSIBLE_REPO) && ansible-playbook -i $(CURDIR)/$(INVENTORY) playbooks/seapath_setup_network.yaml $(ANSIBLE_OPTS)
 
 ansible-setup-ceph:
-	cd $(ANSIBLE_REPO) && ansible-playbook -i $(CURDIR)/$(INVENTORY) playbooks/cluster_setup_ceph.yaml $(ANSIBLE_OPTS)
+	cd $(ANSIBLE_REPO) && ansible-playbook -i $(CURDIR)/$(INVENTORY) playbooks/cluster_setup_cephadm.yaml $(ANSIBLE_OPTS)
 
 ansible-setup-ha:
 	cd $(ANSIBLE_REPO) && ansible-playbook -i $(CURDIR)/$(INVENTORY) playbooks/cluster_setup_ha.yaml $(ANSIBLE_OPTS)
