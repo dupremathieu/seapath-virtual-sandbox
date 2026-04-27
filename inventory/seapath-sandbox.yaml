@@ -27,7 +27,10 @@ all:
     dns_servers: "192.168.100.1"
     subnet: 24
     ntp_servers:
-      - "185.254.101.25"
+      - "0.fedora.pool.ntp.org"
+      - "1.fedora.pool.ntp.org"
+      - "2.fedora.pool.ntp.org"
+      - "3.fedora.pool.ntp.org"
 
     # SEAPATH Ansible connection settings
     ansible_connection: ssh
