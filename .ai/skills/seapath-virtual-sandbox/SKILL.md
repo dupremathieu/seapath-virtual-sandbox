@@ -1,1 +1,0 @@
-/home/mathieu/Documents/seapath/seapath-virtual-sandbox/.claude/skills/seapath-virtual-sandbox/SKILL.md
