@@ -149,6 +149,15 @@ make ansible-setup ANSIBLE_OPTS="-v --check"
 4. `make ansible-setup-network` — OVS bridge `team0` visible on each node
 5. `virsh console seapath-node1` — Ring interfaces (`enp0s4`, `enp0s5`) are up
 
+## AI Assistant Skills (Claude Code, opencode, Copilot…)
+
+The `.claude/skills/` and `.ai/skills/` directories previously present in this repository have been removed.
+
+Skills for SEAPATH tooling are now centralised in a dedicated repository:
+**→ [seapath/seapath-skills](https://github.com/seapath/seapath-skills)** *(future — a `marketplace.json` will be published there)*
+
+In the meantime, the `AGENTS.md` file at the root of this repository contains the instructions that were in those skills and is automatically loaded by Claude Code, opencode, Copilot coding agent, and similar tools.
+
 ## Known Limitations
 
 **PCI slot conflicts**: If libvirt already places a device at slot `0x03`–`0x05`, the XSLT will fail or produce duplicate addresses. Bump the slots to `0x06/0x07/0x08` in `xslt/domain-pci.xsl` and update the `iface_*` variables and the inventory accordingly.
