@@ -40,7 +40,6 @@ jobs:
             openvswitch-switch \
             python3-libvirt \
             ansible \
-            awscli \
             netcat-openbsd \
             jq curl gnupg lsb-release
           wget -O- https://apt.releases.hashicorp.com/gpg \
