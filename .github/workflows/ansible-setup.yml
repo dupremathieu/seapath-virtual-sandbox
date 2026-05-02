@@ -38,11 +38,14 @@ jobs:
             qemu-kvm libvirt-daemon-system libvirt-clients \
             virtinst genisoimage \
             openvswitch-switch \
-            python3-libvirt \
-            ansible \
+            python3-libvirt python3-pip python3-venv \
+            sshpass \
             netcat-openbsd \
             s3cmd \
             jq curl gnupg lsb-release
+          # SEAPATH's prepare.sh requires ansible-core 2.16 exactly
+          python3 -m pip install --break-system-packages \
+            'ansible-core~=2.16.0' 'jmespath' 'netaddr' 'passlib'
           wget -O- https://apt.releases.hashicorp.com/gpg \
             | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
