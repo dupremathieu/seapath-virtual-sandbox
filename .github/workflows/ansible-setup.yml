@@ -1,0 +1,137 @@
+name: ansible-setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      s3_uri:
+        description: "Full s3:// URI of the qcow2 base image"
+        required: true
+        type: string
+      image_filename:
+        description: "Local filename to save the image as"
+        required: true
+        default: seapath-debian.qcow2
+        type: string
+      s3_endpoint_url:
+        description: "Custom S3 endpoint URL (leave blank for AWS S3)"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  ansible-setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      LIBVIRT_DEFAULT_URI: qemu:///system
+      ANSIBLE_HOST_KEY_CHECKING: "False"
+      TF_CLI_ARGS_apply: "-auto-approve"
+      TF_IN_AUTOMATION: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-kvm libvirt-daemon-system libvirt-clients \
+            virtinst genisoimage \
+            openvswitch-switch \
+            python3-libvirt \
+            ansible \
+            awscli \
+            netcat-openbsd \
+            jq curl gnupg lsb-release
+          wget -O- https://apt.releases.hashicorp.com/gpg \
+            | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+            | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update
+          sudo apt-get install -y terraform
+
+      - name: Enable libvirt + Open vSwitch and grant runner access
+        run: |
+          set -euxo pipefail
+          sudo systemctl enable --now libvirtd openvswitch-switch
+          sudo usermod -aG libvirt,kvm "$USER"
+          echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/ovs-vsctl, /usr/bin/ovs-ofctl" \
+            | sudo tee /etc/sudoers.d/runner-ovs
+          sudo chmod 0440 /etc/sudoers.d/runner-ovs
+          ls -l /dev/kvm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Fetch base image from S3
+        run: |
+          set -euxo pipefail
+          mkdir -p images
+          endpoint_arg=""
+          if [ -n "${{ inputs.s3_endpoint_url }}" ]; then
+            endpoint_arg="--endpoint-url=${{ inputs.s3_endpoint_url }}"
+          fi
+          aws s3 cp $endpoint_arg "${{ inputs.s3_uri }}" "images/${{ inputs.image_filename }}"
+          sudo chmod a+r "images/${{ inputs.image_filename }}"
+
+      - name: Write terraform.tfvars
+        run: |
+          cat > terraform.tfvars <<EOF
+          base_image_path = "${{ github.workspace }}/images/${{ inputs.image_filename }}"
+          EOF
+          cat terraform.tfvars
+
+      - name: Clone and prepare SEAPATH Ansible repo
+        run: |
+          set -euxo pipefail
+          git clone --depth=1 https://github.com/seapath/ansible.git
+          cd ansible && ./prepare.sh
+
+      - name: Terraform init + apply (provision VMs)
+        run: sg libvirt -c 'make init && make apply'
+
+      - name: Start VMs and networks
+        run: sg libvirt -c 'make start'
+
+      - name: Wait for SSH on all nodes
+        run: |
+          set -euxo pipefail
+          for ip in 192.168.100.101 192.168.100.102 192.168.100.103; do
+            echo "Waiting for $ip:22..."
+            for i in $(seq 1 60); do
+              if nc -z -w 2 "$ip" 22; then
+                echo "  $ip is reachable"
+                break
+              fi
+              sleep 5
+              if [ "$i" -eq 60 ]; then
+                echo "Timed out waiting for $ip"
+                exit 1
+              fi
+            done
+          done
+
+      - name: ansible-ping
+        run: sg libvirt -c 'make ansible-ping'
+
+      - name: ansible-setup
+        run: sg libvirt -c 'make ansible-setup'
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          set +e
+          sudo virsh -c qemu:///system list --all
+          sudo virsh -c qemu:///system net-list --all
+          sudo ovs-vsctl show
+          sudo journalctl -u libvirtd --no-pager | tail -300
+          for n in seapath-node1 seapath-node2 seapath-node3; do
+            echo "=== $n ==="
+            sudo virsh -c qemu:///system dominfo "$n"
+          done
+          free -h
+          df -h
