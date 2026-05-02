@@ -12,8 +12,8 @@ on:
         required: true
         default: seapath-debian.qcow2
         type: string
-      s3_endpoint_url:
-        description: "Custom S3 endpoint URL (leave blank for AWS S3)"
+      s3_host:
+        description: "S3 host (e.g. s3.fr1.next.ink). Leave blank for AWS S3."
         required: false
         default: ""
         type: string
@@ -41,6 +41,7 @@ jobs:
             python3-libvirt \
             ansible \
             netcat-openbsd \
+            s3cmd \
             jq curl gnupg lsb-release
           wget -O- https://apt.releases.hashicorp.com/gpg \
             | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -61,18 +62,23 @@ jobs:
 
       - name: Fetch base image from S3
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+          ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_HOST: ${{ inputs.s3_host }}
+          S3_URI: ${{ inputs.s3_uri }}
+          IMAGE_FILENAME: ${{ inputs.image_filename }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           mkdir -p images
-          endpoint_arg=""
-          if [ -n "${{ inputs.s3_endpoint_url }}" ]; then
-            endpoint_arg="--endpoint-url=${{ inputs.s3_endpoint_url }}"
+          host_args=()
+          if [ -n "$S3_HOST" ]; then
+            host_args=(--host="$S3_HOST" --host-bucket="%(bucket)s.$S3_HOST")
           fi
-          aws s3 cp $endpoint_arg "${{ inputs.s3_uri }}" "images/${{ inputs.image_filename }}"
-          sudo chmod a+r "images/${{ inputs.image_filename }}"
+          s3cmd get "$S3_URI" "images/$IMAGE_FILENAME" \
+            --access_key="$ACCESS_KEY" \
+            --secret_key="$SECRET_KEY" \
+            "${host_args[@]}"
+          sudo chmod a+r "images/$IMAGE_FILENAME"
 
       - name: Write terraform.tfvars
         run: |
