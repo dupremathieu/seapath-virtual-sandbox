@@ -85,10 +85,10 @@ jobs:
 
       - name: Write terraform.tfvars
         run: |
-          cat > terraform.tfvars <<EOF
+          cat > terraform/terraform.tfvars <<EOF
           base_image_path = "${{ github.workspace }}/images/${{ inputs.image_filename }}"
           EOF
-          cat terraform.tfvars
+          cat terraform/terraform.tfvars
 
       - name: Clone and prepare SEAPATH Ansible repo
         run: |
