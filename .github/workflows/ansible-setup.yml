@@ -37,6 +37,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             qemu-kvm libvirt-daemon-system libvirt-clients \
             virtinst genisoimage \
+            dnsmasq-base \
             openvswitch-switch \
             python3-libvirt python3-pip python3-venv \
             sshpass \
@@ -62,6 +63,18 @@ jobs:
             | sudo tee /etc/sudoers.d/runner-ovs
           sudo chmod 0440 /etc/sudoers.d/runner-ovs
           ls -l /dev/kvm
+
+      - name: Create libvirt 'default' storage pool
+        run: |
+          set -euxo pipefail
+          sudo mkdir -p /var/lib/libvirt/images
+          if ! sudo virsh pool-info default >/dev/null 2>&1; then
+            sudo virsh pool-define-as default dir --target /var/lib/libvirt/images
+            sudo virsh pool-build default
+            sudo virsh pool-start default
+            sudo virsh pool-autostart default
+          fi
+          sudo virsh pool-list --all
 
       - name: Fetch base image from S3
         env:
