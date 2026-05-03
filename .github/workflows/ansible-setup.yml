@@ -35,7 +35,7 @@ jobs:
           set -euxo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            qemu-kvm libvirt-daemon-system libvirt-clients \
+            qemu-kvm qemu-utils libvirt-daemon-system libvirt-clients \
             virtinst genisoimage \
             dnsmasq-base \
             openvswitch-switch \
