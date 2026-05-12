@@ -28,12 +28,12 @@ case "$OS" in
     echo "→ Detected Ubuntu/Debian host"
     sudo apt-get update
     sudo apt-get install -y --no-install-recommends \
-      fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt
+      fence-virt fence-virtd
     ;;
   *)
     echo "ERROR: unsupported OS '$OS'. Please install fence-virt packages manually."
-    echo "  Fedora: dnf install fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt"
-    echo "  Ubuntu: apt install fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt"
+    echo "  Fedora:  dnf install fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt"
+    echo "  Ubuntu:  apt install fence-virt fence-virtd"
     exit 1
     ;;
 esac
@@ -51,22 +51,24 @@ fi
 # Write fence_virtd configuration
 echo "→ Writing $FENCE_CONF"
 sudo tee "$FENCE_CONF" > /dev/null <<'EOCONF'
-backends {
-    libvirt {
-        uri = "qemu:///system";
-    }
+fence_virtd {
+    listener = "tcp";
+    backend = "libvirt";
 }
 
 listeners {
     tcp {
+        key_file = "/etc/cluster/fence_virt.key";
         port = "1229";
         address = "0.0.0.0";
         family = "ipv4";
     }
 }
 
-fence_virt {
-    key_file = "/etc/cluster/fence_virt.key";
+backends {
+    libvirt {
+        uri = "qemu:///system";
+    }
 }
 EOCONF
 

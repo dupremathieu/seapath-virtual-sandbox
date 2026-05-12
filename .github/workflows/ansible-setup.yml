@@ -54,7 +54,7 @@ jobs:
             netcat-openbsd \
             s3cmd \
             jq curl gnupg lsb-release \
-            fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt
+            fence-virt fence-virtd
           # SEAPATH's prepare.sh requires ansible-core 2.16 exactly
           python3 -m pip install --break-system-packages \
             'ansible-core~=2.16.0' 'jmespath' 'netaddr' 'passlib'
@@ -82,20 +82,24 @@ jobs:
           sudo dd if=/dev/urandom bs=32 count=1 of=/etc/cluster/fence_virt.key
           sudo chmod 0400 /etc/cluster/fence_virt.key
           cat | sudo tee /etc/fence_virt.conf <<'FENCECONF'
-          backends {
-              libvirt {
-                  uri = "qemu:///system";
-              }
+          fence_virtd {
+              listener = "tcp";
+              backend = "libvirt";
           }
+
           listeners {
               tcp {
+                  key_file = "/etc/cluster/fence_virt.key";
                   port = "1229";
                   address = "0.0.0.0";
                   family = "ipv4";
               }
           }
-          fence_virt {
-              key_file = "/etc/cluster/fence_virt.key";
+
+          backends {
+              libvirt {
+                  uri = "qemu:///system";
+              }
           }
           FENCECONF
           sudo systemctl enable --now fence_virtd
@@ -193,7 +197,8 @@ jobs:
               /etc/cluster/fence_virt.key \
               "ansible@$ip:/tmp/fence_virt.key"
             ssh -o StrictHostKeyChecking=no "ansible@$ip" \
-              "sudo apt-get install -y -qq fence-virt 2>/dev/null; \
+              "sudo apt-get update -qq 2>/dev/null || true; \
+               sudo apt-get install -y -qq fence-virt 2>/dev/null || true; \
                sudo mkdir -p /etc/cluster; \
                sudo mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; \
                sudo chmod 400 /etc/cluster/fence_virt.key"

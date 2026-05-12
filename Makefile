@@ -187,9 +187,9 @@ fence-key-push:
 fence-virtd-config:
 	@echo "Sample /etc/fence_virt.conf for the host (Fedora / Ubuntu):"
 	@echo "# Use scripts/fence-setup-host.sh to install and configure."
+	@echo 'fence_virtd { listener = "tcp"; backend = "libvirt"; }'
+	@echo 'listeners { tcp { key_file = "/etc/cluster/fence_virt.key"; port = "1229"; address = "0.0.0.0"; family = "ipv4"; } }'
 	@echo 'backends { libvirt { uri = "qemu:///system"; } }'
-	@echo 'listeners { tcp { port = "1229"; address = "0.0.0.0"; family = "ipv4"; } }'
-	@echo 'fence_virt { key_file = "/etc/cluster/fence_virt.key"; }'
 
 fence-setup: fence-key-gen fence-key-push
 	@echo "Fencing key generated and pushed to all VMs."

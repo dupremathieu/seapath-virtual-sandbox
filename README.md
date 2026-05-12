@@ -14,7 +14,7 @@ A fully virtual 3-node SEAPATH cluster running on QEMU/KVM, for local developmen
   ```
 - `ansible` 2.16 — installed by `prepare.sh` in the SEAPATH Ansible repo (see Quick Start)
 - A SEAPATH qcow2 image with an `ansible` user whose `~/.ssh/authorized_keys` contains your public key
-- **Fencing (STONITH)** requires `fence-virt`, `fence-virtd`, `fence-virtd-tcp`, and `fence-virtd-libvirt` packages on the host. Use `scripts/fence-setup-host.sh` for one-shot setup. The `fence-virt` package is also needed inside the VMs (`make fence-setup` handles this).
+- **Fencing (STONITH)** requires `fence-virt` and `fence-virtd` packages on the host (on Fedora also `fence-virtd-tcp` and `fence-virtd-libvirt`; Ubuntu bundles these into the main package). Use `scripts/fence-setup-host.sh` for one-shot setup. The `fence-virt` package is also needed inside the VMs (`make fence-setup` handles this).
 
 ## Quick Start
 
