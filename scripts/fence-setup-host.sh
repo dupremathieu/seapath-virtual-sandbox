@@ -50,15 +50,22 @@ fi
 
 # Write fence_virtd configuration
 echo "→ Writing $FENCE_CONF"
-sudo tee "$FENCE_CONF" > /dev/null <<'EOCONF'
+{
+  if [ "$OS" = "fedora" ]; then
+    MODULE_PATH="/usr/lib64/fence-virt"
+  else
+    MODULE_PATH="/usr/lib/x86_64-linux-gnu/fence-virt"
+  fi
+  sudo tee "$FENCE_CONF" > /dev/null <<EOCONF
 fence_virtd {
     listener = "tcp";
     backend = "libvirt";
+    module_path = "$MODULE_PATH";
 }
 
 listeners {
     tcp {
-        key_file = "/etc/cluster/fence_virt.key";
+        key_file = "$FENCE_KEY";
         port = "1229";
         address = "0.0.0.0";
         family = "ipv4";
@@ -71,6 +78,7 @@ backends {
     }
 }
 EOCONF
+}
 
 sudo chmod 0644 "$FENCE_CONF"
 
@@ -78,6 +86,15 @@ sudo chmod 0644 "$FENCE_CONF"
 echo "→ Starting fence_virtd"
 sudo systemctl enable --now fence_virtd 2>/dev/null || true
 sudo systemctl status fence_virtd --no-pager || true
+
+# Open firewall port
+echo "→ Opening firewall port 1229/tcp"
+if [ "$OS" = "fedora" ]; then
+  sudo firewall-cmd --zone=libvirt --add-rich-rule='rule family="ipv4" port port="1229" protocol="tcp" accept' 2>/dev/null || true
+  sudo firewall-cmd --zone=libvirt --add-rich-rule='rule family="ipv4" port port="1229" protocol="tcp" accept' --permanent 2>/dev/null || true
+elif [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+  sudo ufw allow 1229/tcp 2>/dev/null || true
+fi
 
 echo ""
 echo "fence_virtd is now running on $(hostname)."

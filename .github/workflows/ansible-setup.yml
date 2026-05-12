@@ -88,6 +88,7 @@ jobs:
           fence_virtd {
               listener = "tcp";
               backend = "libvirt";
+              module_path = "/usr/lib/x86_64-linux-gnu/fence-virt";
           }
 
           listeners {
@@ -105,6 +106,7 @@ jobs:
               }
           }
           FENCECONF
+          sudo ufw allow 1229/tcp || true
           sudo systemctl enable --now fence_virtd
           sudo systemctl status fence_virtd --no-pager
 
@@ -200,11 +202,7 @@ jobs:
               /tmp/fence/fence_virt.key \
               "ansible@$ip:/tmp/fence_virt.key"
             ssh -o StrictHostKeyChecking=no "ansible@$ip" \
-              "sudo apt-get update -qq 2>/dev/null || true; \
-               sudo apt-get install -y -qq fence-virt 2>/dev/null || true; \
-               sudo mkdir -p /etc/cluster; \
-               sudo mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; \
-               sudo chmod 400 /etc/cluster/fence_virt.key"
+              "sudo /bin/sh -c 'apt-get update -qq 2>/dev/null; apt-get install -y -qq fence-virt 2>/dev/null; mkdir -p /etc/cluster; mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; chmod 400 /etc/cluster/fence_virt.key'"
           done
 
       - name: ansible-ping
@@ -223,22 +221,22 @@ jobs:
           $SSH ansible@192.168.100.101 'which fence_virt'
 
           echo "=== Check stonith-enabled ==="
-          $SSH ansible@192.168.100.101 'sudo crm configure show' | grep 'stonith-enabled=true'
+          $SSH ansible@192.168.100.101 "sudo /bin/sh -c 'crm configure show'" | grep 'stonith-enabled=true'
 
           echo "=== Check stonith resources are started ==="
           for node in node1 node2 node3; do
             echo "  stonith-$node:"
-            $SSH ansible@192.168.100.101 "sudo crm resource status stonith-$node" || echo "  (not started)"
+            $SSH ansible@192.168.100.101 "sudo /bin/sh -c 'crm resource status stonith-$node'" || echo "  (not started)"
           done
 
           echo "=== Fencing topology ==="
           for node in node1 node2 node3; do
             echo "  Devices that can fence $node:"
-            $SSH ansible@192.168.100.101 "sudo stonith_admin --list $node" || echo "  (none)"
+            $SSH ansible@192.168.100.101 "sudo /bin/sh -c 'stonith_admin --list $node'" || echo "  (none)"
           done
 
           echo "=== Test fence_virt connectivity to fence_virtd ==="
-          $SSH ansible@192.168.100.102 "sudo fence_virt -a 192.168.100.1 -k /etc/cluster/fence_virt.key -o list" || echo "  (list failed)"
+          $SSH ansible@192.168.100.102 "sudo /bin/sh -c 'fence_virt -T 192.168.100.1 -p 1229 -k /etc/cluster/fence_virt.key -o list'" || echo "  (list failed)"
 
           echo "=== STONITH verification complete ==="
 

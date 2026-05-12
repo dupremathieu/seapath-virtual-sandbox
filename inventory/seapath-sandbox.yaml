@@ -51,15 +51,15 @@ all:
     extra_crm_cmd_to_run: |
       property stonith-enabled=true
       primitive stonith-node1 stonith:fence_virt \
-        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node1 identity_file=/etc/cluster/fence_virt.key \
+        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node1 key_file=/etc/cluster/fence_virt.key \
         pcmk_host_list=node1 pcmk_host_check=static-list \
         op monitor interval=60s
       primitive stonith-node2 stonith:fence_virt \
-        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node2 identity_file=/etc/cluster/fence_virt.key \
+        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node2 key_file=/etc/cluster/fence_virt.key \
         pcmk_host_list=node2 pcmk_host_check=static-list \
         op monitor interval=60s
       primitive stonith-node3 stonith:fence_virt \
-        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node3 identity_file=/etc/cluster/fence_virt.key \
+        params ipaddr=192.168.100.1 ipport=1229 plug=seapath-node3 key_file=/etc/cluster/fence_virt.key \
         pcmk_host_list=node3 pcmk_host_check=static-list \
         op monitor interval=60s
 

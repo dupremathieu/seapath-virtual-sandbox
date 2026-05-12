@@ -187,7 +187,11 @@ fence-key-push:
 fence-virtd-config:
 	@echo "Sample /etc/fence_virt.conf for the host (Fedora / Ubuntu):"
 	@echo "# Use scripts/fence-setup-host.sh to install and configure."
-	@echo 'fence_virtd { listener = "tcp"; backend = "libvirt"; }'
+	@echo ""
+	@echo "  Fedora:   module_path = \"/usr/lib64/fence-virt\""
+	@echo "  Ubuntu:   module_path = \"/usr/lib/x86_64-linux-gnu/fence-virt\""
+	@echo ""
+	@echo 'fence_virtd { listener = "tcp"; backend = "libvirt"; module_path = "..."; }'
 	@echo 'listeners { tcp { key_file = "/etc/cluster/fence_virt.key"; port = "1229"; address = "0.0.0.0"; family = "ipv4"; } }'
 	@echo 'backends { libvirt { uri = "qemu:///system"; } }'
 

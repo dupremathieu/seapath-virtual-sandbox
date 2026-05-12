@@ -154,7 +154,7 @@ make ansible-setup ANSIBLE_OPTS="-v --check"
 4. `make ansible-setup-network` — OVS bridge `team0` visible on each node
 5. `virsh console seapath-node1` — Ring interfaces (`enp0s4`, `enp0s5`) are up
 6. `make fence-setup && make ansible-setup-ha` — STONITH fencing enabled, 3 fence_virt primitives registered in Pacemaker
-7. `ssh ansible@192.168.100.102 sudo fence_virt -a 192.168.100.1 -k /etc/cluster/fence_virt.key -o list` — VM can reach fence_virtd on the host
+7. `ssh ansible@192.168.100.102 "sudo /bin/sh -c 'fence_virt -T 192.168.100.1 -p 1229 -k /etc/cluster/fence_virt.key -o list'"` — VM can reach fence_virtd on the host
 
 ## AI Assistant Skills (Claude Code, opencode, Copilot…)
 
