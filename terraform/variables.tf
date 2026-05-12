@@ -74,3 +74,9 @@ variable "iface_cluster_b" {
   type        = string
   default     = "enp0s5"
 }
+
+variable "nested_kvm_feature" {
+  description = "CPU feature to expose for nested KVM support (svm for AMD, vmx for Intel). Set to empty string to disable."
+  type        = string
+  default     = "svm"
+}

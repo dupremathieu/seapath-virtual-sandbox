@@ -28,6 +28,14 @@ resource "libvirt_domain" "node" {
 
   cpu = {
     mode = "host-passthrough"
+    features = concat(
+      [
+        { name = "invtsc", policy = "require" },
+      ],
+      var.nested_kvm_feature != "" ? [
+        { name = var.nested_kvm_feature, policy = "require" }
+      ] : []
+    )
   }
 
   features = {
