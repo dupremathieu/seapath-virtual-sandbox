@@ -14,6 +14,7 @@ A fully virtual 3-node SEAPATH cluster running on QEMU/KVM, for local developmen
   ```
 - `ansible` 2.16 — installed by `prepare.sh` in the SEAPATH Ansible repo (see Quick Start)
 - A SEAPATH qcow2 image with an `ansible` user whose `~/.ssh/authorized_keys` contains your public key
+- **Fencing (STONITH)** requires `fence-virt`, `fence-virtd`, `fence-virtd-tcp`, and `fence-virtd-libvirt` packages on the host. Use `scripts/fence-setup-host.sh` for one-shot setup. The `fence-virt` package is also needed inside the VMs (`make fence-setup` handles this).
 
 ## Quick Start
 
@@ -124,6 +125,10 @@ Fixed PCI slot addresses are injected via XSLT so the guest OS sees predictable 
 | `ansible-setup-network` | Network configuration only |
 | `ansible-setup-ceph` | Ceph deployment only |
 | `ansible-setup-ha` | HA (Pacemaker/Corosync) only |
+| `fence-key-gen` | Generate shared key for fence_virt ↔ fence_virtd |
+| `fence-key-push` | Install `fence-virt` on VMs and push the shared key |
+| `fence-virtd-config` | Print a sample `fence_virt.conf` for the host |
+| `fence-setup` | Run `fence-key-gen` + `fence-key-push` |
 
 Override the snapshot name with `SNAPSHOT`:
 ```bash
@@ -148,6 +153,8 @@ make ansible-setup ANSIBLE_OPTS="-v --check"
 3. `make ansible-ping` — All 3 nodes respond
 4. `make ansible-setup-network` — OVS bridge `team0` visible on each node
 5. `virsh console seapath-node1` — Ring interfaces (`enp0s4`, `enp0s5`) are up
+6. `make fence-setup && make ansible-setup-ha` — STONITH fencing enabled, 3 fence_virt primitives registered in Pacemaker
+7. `ssh ansible@192.168.100.102 sudo fence_virt -a 192.168.100.1 -k /etc/cluster/fence_virt.key -o list` — VM can reach fence_virtd on the host
 
 ## AI Assistant Skills (Claude Code, opencode, Copilot…)
 
@@ -169,3 +176,5 @@ In the meantime, the `AGENTS.md` file at the root of this repository contains th
 **No PTP**: `ptp_interface` is intentionally omitted — there is no PTP hardware in a virtual sandbox.
 
 **Resource usage**: Each node uses 4 GiB RAM and 4 vCPUs by default, plus 20 GiB for the Ceph OSD disk. A full 3-node cluster requires at least 12 GiB free RAM on the host.
+
+**STONITH fencing requires fence_virtd on the host**: Fencing uses `fence_virt` inside the VMs talking to `fence_virtd` on the host via TCP (port 1229). If `fence_virtd` is not running, fencing probes fail and stonith resources show as "Stopped" in Pacemaker. Use `scripts/fence-setup-host.sh` for one-shot host configuration; this setup is out of scope for Terraform by design (the host OS is not managed by this sandbox). After `terraform destroy && make apply`, the shared key must be pushed again with `make fence-setup`.

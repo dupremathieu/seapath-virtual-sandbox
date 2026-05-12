@@ -53,7 +53,8 @@ jobs:
             sshpass \
             netcat-openbsd \
             s3cmd \
-            jq curl gnupg lsb-release
+            jq curl gnupg lsb-release \
+            fence-virt fence-virtd fence-virtd-tcp fence-virtd-libvirt
           # SEAPATH's prepare.sh requires ansible-core 2.16 exactly
           python3 -m pip install --break-system-packages \
             'ansible-core~=2.16.0' 'jmespath' 'netaddr' 'passlib'
@@ -73,6 +74,32 @@ jobs:
             | sudo tee /etc/sudoers.d/runner-ovs
           sudo chmod 0440 /etc/sudoers.d/runner-ovs
           ls -l /dev/kvm
+
+      - name: Configure and start fence_virtd on CI host
+        run: |
+          set -euxo pipefail
+          sudo mkdir -p /etc/cluster
+          sudo dd if=/dev/urandom bs=32 count=1 of=/etc/cluster/fence_virt.key
+          sudo chmod 0400 /etc/cluster/fence_virt.key
+          cat | sudo tee /etc/fence_virt.conf <<'FENCECONF'
+          backends {
+              libvirt {
+                  uri = "qemu:///system";
+              }
+          }
+          listeners {
+              tcp {
+                  port = "1229";
+                  address = "0.0.0.0";
+                  family = "ipv4";
+              }
+          }
+          fence_virt {
+              key_file = "/etc/cluster/fence_virt.key";
+          }
+          FENCECONF
+          sudo systemctl enable --now fence_virtd
+          sudo systemctl status fence_virtd --no-pager
 
       - name: Create libvirt 'default' storage pool
         run: |
@@ -155,6 +182,21 @@ jobs:
                 exit 1
               fi
             done
+            done
+
+      - name: Push fencing key to VMs
+        run: |
+          set -euxo pipefail
+          for ip in 192.168.100.101 192.168.100.102 192.168.100.103; do
+            echo "Pushing fence key to $ip..."
+            scp -o StrictHostKeyChecking=no \
+              /etc/cluster/fence_virt.key \
+              "ansible@$ip:/tmp/fence_virt.key"
+            ssh -o StrictHostKeyChecking=no "ansible@$ip" \
+              "sudo apt-get install -y -qq fence-virt 2>/dev/null; \
+               sudo mkdir -p /etc/cluster; \
+               sudo mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; \
+               sudo chmod 400 /etc/cluster/fence_virt.key"
           done
 
       - name: ansible-ping
@@ -162,6 +204,35 @@ jobs:
 
       - name: ansible-setup
         run: sg libvirt -c 'make ansible-setup'
+
+      - name: Verify STONITH fencing
+        if: success()
+        run: |
+          set -euxo pipefail
+          SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+          echo "=== Check fence_virt binary on node1 ==="
+          $SSH ansible@192.168.100.101 'which fence_virt'
+
+          echo "=== Check stonith-enabled ==="
+          $SSH ansible@192.168.100.101 'sudo crm configure show' | grep 'stonith-enabled=true'
+
+          echo "=== Check stonith resources are started ==="
+          for node in node1 node2 node3; do
+            echo "  stonith-$node:"
+            $SSH ansible@192.168.100.101 "sudo crm resource status stonith-$node" || echo "  (not started)"
+          done
+
+          echo "=== Fencing topology ==="
+          for node in node1 node2 node3; do
+            echo "  Devices that can fence $node:"
+            $SSH ansible@192.168.100.101 "sudo stonith_admin --list $node" || echo "  (none)"
+          done
+
+          echo "=== Test fence_virt connectivity to fence_virtd ==="
+          $SSH ansible@192.168.100.102 "sudo fence_virt -a 192.168.100.1 -k /etc/cluster/fence_virt.key -o list" || echo "  (list failed)"
+
+          echo "=== STONITH verification complete ==="
 
       - name: Diagnostics on failure
         if: failure()
