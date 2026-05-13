@@ -193,6 +193,9 @@ jobs:
             done
             done
 
+      - name: Grow root partition and filesystem
+        run: sg libvirt -c 'make ansible-grow-rootfs'
+
       - name: Push fencing key to VMs
         run: |
           set -euxo pipefail
@@ -204,9 +207,6 @@ jobs:
             ssh -o StrictHostKeyChecking=no "ansible@$ip" \
               "sudo /bin/sh -c 'apt-get update -qq 2>/dev/null; apt-get install -y -qq fence-virt 2>/dev/null; mkdir -p /etc/cluster; mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; chmod 400 /etc/cluster/fence_virt.key'"
           done
-
-      - name: Grow root partition and filesystem
-        run: sg libvirt -c 'make ansible-grow-rootfs'
 
       - name: ansible-ping
         run: sg libvirt -c 'make ansible-ping'
