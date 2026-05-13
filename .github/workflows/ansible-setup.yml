@@ -218,7 +218,7 @@ jobs:
           SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
           echo "=== Check fence_virt binary on node1 ==="
-          $SSH ansible@192.168.100.101 'which fence_virt'
+          $SSH ansible@192.168.100.101 'test -x /usr/sbin/fence_virt && echo "fence_virt found" || echo "fence_virt NOT found"'
 
           echo "=== Check stonith-enabled ==="
           $SSH ansible@192.168.100.101 "sudo /bin/sh -c 'crm configure show'" | grep 'stonith-enabled=true'
