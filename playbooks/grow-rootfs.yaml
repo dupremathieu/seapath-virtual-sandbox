@@ -40,7 +40,7 @@
 
     - name: Determine if growth is needed
       ansible.builtin.set_fact:
-        needs_grow: "{{ free_sectors > sector_tolerance }}"
+        needs_grow: "{{ (free_sectors | int) > (sector_tolerance | int) }}"
 
     - name: Extend partition and filesystem
       when: needs_grow | bool
