@@ -14,23 +14,28 @@
     sector_tolerance: 10
 
   tasks:
+    - name: Fix GPT backup header if disk was expanded underneath
+      ansible.builtin.shell:
+        cmd: "printf 'Fix\n' | parted ---pretend-input-tty {{ disk_device }} print > /dev/null 2>&1; true"
+      changed_when: false
+
     - name: Read partition layout (parted in sectors with free space)
       ansible.builtin.shell: |
         set -o pipefail
         parted -s {{ disk_device }} unit s print free | awk '
-          /^Disk \//          { gsub(/s$/, "", $3); disk=$3; }
-          /^[[:space:]]*[0-9]/ { trailing=1; gsub(/s$/, "", $3); part=$1; end=$3; }
-          /Free Space/        { trailing=0; gsub(/s$/, "", $3); free=$3; }
-          END                 { if (trailing) free=0; printf "%d %d %d %d", free, part, end, disk; }
+          /^Disk \//                           { gsub(/s$/, "", $3); disk=$3; }
+          /Free Space/                         { trailing=0; gsub(/s$/, "", $3); free=$3; }
+          /^[[:space:]]*[0-9]/ && !/Free Space/{ trailing=1; gsub(/s$/, "", $3); part=$1; end=$3; }
+          END                                  { if (trailing) free=0; printf "%d %d %d %d", free, part, end, disk; }
         '
       register: layout
       changed_when: false
 
     - name: Set layout facts
       ansible.builtin.set_fact:
-        free_sectors: "{{ layout.stdout.split()[0] | int }}"
-        part_num:    "{{ layout.stdout.split()[1] | int }}"
-        part_end:    "{{ layout.stdout.split()[2] | int }}"
+        free_sectors:  "{{ layout.stdout.split()[0] | int }}"
+        part_num:     "{{ layout.stdout.split()[1] | int }}"
+        part_end:     "{{ layout.stdout.split()[2] | int }}"
         disk_sectors: "{{ layout.stdout.split()[3] | int }}"
 
     - name: Determine if growth is needed
