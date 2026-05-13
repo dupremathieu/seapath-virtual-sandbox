@@ -37,6 +37,7 @@ FENCE_KEY_REMOTE := /etc/cluster/fence_virt.key
         console-node1 console-node2 console-node3 \
         ansible-ping ansible-setup \
         ansible-setup-network ansible-setup-ceph ansible-setup-ha \
+        ansible-grow-rootfs \
         fence-key-gen fence-key-push fence-virtd-config fence-setup \
         help
 
@@ -162,6 +163,9 @@ ansible-setup-ceph:
 ansible-setup-ha:
 	cd $(ANSIBLE_REPO) && ansible-playbook -i $(CURDIR)/$(INVENTORY) playbooks/cluster_setup_ha.yaml $(ANSIBLE_OPTS)
 
+ansible-grow-rootfs:
+	ansible-playbook -i $(INVENTORY) playbooks/grow-rootfs.yaml $(ANSIBLE_OPTS)
+
 ## STONITH fencing (fence_virt + fence_virtd on host)
 fence-key-gen:
 	@mkdir -p keys
@@ -232,6 +236,7 @@ help:
 	@echo "  make ansible-setup-network Configure network only"
 	@echo "  make ansible-setup-ceph    Deploy Ceph only"
 	@echo "  make ansible-setup-ha      Configure HA (Pacemaker/Corosync) only"
+	@echo "  make ansible-grow-rootfs   Extend the last partition and grow the root filesystem"
 	@echo ""
 	@echo "Pass extra flags via ANSIBLE_OPTS, e.g.:"
 	@echo "  make ansible-setup ANSIBLE_OPTS='-v --check'"

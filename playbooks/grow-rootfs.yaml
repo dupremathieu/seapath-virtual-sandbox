@@ -1,0 +1,76 @@
+---
+# Playbook: Extend the last partition on /dev/vda to use all available
+# disk space, then grow the filesystem with /usr/lib/systemd/systemd-growfs.
+#
+# Idempotent: a second run is a no-op when the partition already fills
+# the disk.
+
+- name: Grow last partition and filesystem
+  hosts: all
+  gather_facts: false
+  become: true
+  vars:
+    disk_device: /dev/vda
+    sector_tolerance: 10
+
+  tasks:
+    - name: Read partition layout (parted in sectors with free space)
+      ansible.builtin.shell: |
+        set -o pipefail
+        parted -s {{ disk_device }} unit s print free | awk '
+          /^Disk \//          { gsub(/s$/, "", $3); disk=$3; }
+          /^[[:space:]]*[0-9]/ { trailing=1; gsub(/s$/, "", $3); part=$1; end=$3; }
+          /Free Space/        { trailing=0; gsub(/s$/, "", $3); free=$3; }
+          END                 { if (trailing) free=0; printf "%d %d %d %d", free, part, end, disk; }
+        '
+      register: layout
+      changed_when: false
+
+    - name: Set layout facts
+      ansible.builtin.set_fact:
+        free_sectors: "{{ layout.stdout.split()[0] | int }}"
+        part_num:    "{{ layout.stdout.split()[1] | int }}"
+        part_end:    "{{ layout.stdout.split()[2] | int }}"
+        disk_sectors: "{{ layout.stdout.split()[3] | int }}"
+
+    - name: Determine if growth is needed
+      ansible.builtin.set_fact:
+        needs_grow: "{{ free_sectors > sector_tolerance }}"
+
+    - name: Extend partition and filesystem
+      when: needs_grow | bool
+      block:
+        - name: Resize partition to 100%
+          ansible.builtin.shell:
+            cmd: "printf 'Yes\n' | parted ---pretend-input-tty {{ disk_device }} resizepart {{ part_num }} 100%"
+
+        - name: Notify kernel of new partition size
+          ansible.builtin.command:
+            cmd: "partprobe {{ disk_device }}"
+
+        - name: Resolve partition to mount point
+          ansible.builtin.command:
+            cmd: "findmnt -nr -o TARGET {{ disk_device }}{{ part_num }}"
+          register: mountpoint
+          ignore_errors: true
+
+        - name: Grow filesystem
+          ansible.builtin.command:
+            cmd: "/usr/lib/systemd/systemd-growfs {{ mountpoint.stdout }}"
+          when:
+            - mountpoint.rc == 0
+            - mountpoint.stdout | length > 0
+          register: growfs_result
+
+    - name: Report status
+      ansible.builtin.debug:
+        msg: >-
+          {%- if needs_grow | bool -%}
+          GROWN — partition {{ part_num }} extended to fill {{ disk_device }}
+          (end {{ part_end }}s, free before: {{ free_sectors }}s,
+           mount: {{ mountpoint.stdout | default('?') }},
+           growfs: {{ growfs_result.stdout | default('ok') | trim }})
+          {%- else -%}
+          SKIPPED — partition {{ part_num }} already at max size
+          (end {{ part_end }}s, free space: {{ free_sectors }}s)
+          {%- endif -%}
