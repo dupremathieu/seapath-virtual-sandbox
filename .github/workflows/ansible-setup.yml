@@ -204,7 +204,7 @@ jobs:
             scp -o StrictHostKeyChecking=no \
               /tmp/fence/fence_virt.key \
               "ansible@$ip:/tmp/fence_virt.key"
-            ssh -o StrictHostKeyChecking=no "ansible@$ip" \
+            ssh -t -o StrictHostKeyChecking=no "ansible@$ip" \
               "sudo /bin/sh -c 'apt-get update -qq 2>/dev/null; apt-get install -y -qq fence-virt 2>/dev/null; mkdir -p /etc/cluster; mv /tmp/fence_virt.key /etc/cluster/fence_virt.key; chmod 400 /etc/cluster/fence_virt.key'"
           done
 
@@ -218,7 +218,7 @@ jobs:
         if: success()
         run: |
           set -euxo pipefail
-          SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          SSH="ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
           echo "=== Check fence_virt binary on node1 ==="
           $SSH ansible@192.168.100.101 'test -x /usr/sbin/fence_virt && echo "fence_virt found" || echo "fence_virt NOT found"'

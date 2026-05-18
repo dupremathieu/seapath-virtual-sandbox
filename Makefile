@@ -181,11 +181,9 @@ fence-key-push:
 	@test -f $(FENCE_KEY) || (echo "Run 'make fence-key-gen' first" && false)
 	@for ip in 192.168.100.101 192.168.100.102 192.168.100.103; do \
 		echo "Pushing fence key to $$ip..."; \
-		ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ansible@$$ip \
-			"sudo apt-get install -y -qq fence-virt 2>/dev/null; \
-			 sudo mkdir -p /etc/cluster; \
-			 echo '$$(cat $(FENCE_KEY))' | sudo tee $(FENCE_KEY_REMOTE) > /dev/null; \
-			 sudo chmod 400 $(FENCE_KEY_REMOTE)"; \
+		scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $(FENCE_KEY) ansible@$$ip:/tmp/fence_virt.key; \
+		ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ansible@$$ip \
+			"sudo /bin/sh -c 'apt-get update -qq 2>/dev/null; apt-get install -y -qq fence-virt 2>/dev/null; mkdir -p /etc/cluster; mv /tmp/fence_virt.key $(FENCE_KEY_REMOTE); chmod 400 $(FENCE_KEY_REMOTE)'"; \
 	done
 
 fence-virtd-config:

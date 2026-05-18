@@ -40,7 +40,7 @@ all:
     ip_addr: "{{ ansible_host }}"
     hostname: "{{ inventory_hostname }}"
     apply_network_config: true
-    cephadm_pullimages: true
+    cephadm_pullimages: false
 
     # STONITH fencing via fence_virt + fence_virtd on the host
     configure_ha_disable_stonith: false
