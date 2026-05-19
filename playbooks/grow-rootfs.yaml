@@ -45,6 +45,18 @@
     - name: Extend partition and filesystem
       when: needs_grow | bool
       block:
+        - name: Wait for system boot to complete
+          ansible.builtin.shell: |
+            for i in $(seq 1 60); do
+              state=$(systemctl is-system-running 2>/dev/null) || continue
+              case "$state" in
+                running|degraded) exit 0 ;;
+              esac
+              sleep 2
+            done
+            exit 1
+          changed_when: false
+
         - name: Check if overlay storage is mounted
           ansible.builtin.command:
             cmd: "findmnt -n /mnt/persistent/containers/storage/overlay"
