@@ -47,14 +47,11 @@
       block:
         - name: Wait for system boot to complete
           ansible.builtin.shell: |
-            for i in $(seq 1 60); do
-              state=$(systemctl is-system-running 2>/dev/null) || continue
-              case "$state" in
-                running|degraded) exit 0 ;;
-              esac
-              sleep 2
-            done
-            exit 1
+            if command -v systemctl >/dev/null 2>&1 && systemctl is-system-running --wait >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+            exit 0
           changed_when: false
 
         - name: Check if overlay storage is mounted
