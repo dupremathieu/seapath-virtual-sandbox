@@ -3,19 +3,40 @@ name: ansible-setup
 on:
   workflow_dispatch:
     inputs:
-      s3_uri:
-        description: "Full s3:// URI of the qcow2 base image"
+      source_type:
+        description: "Download source for the qcow2 base image"
         required: true
+        type: choice
+        options:
+          - s3
+          - http
+          - artifactory
+        default: s3
+      s3_uri:
+        description: "Full s3:// URI of the qcow2 base image (source_type: s3)"
+        required: false
+        type: string
+      s3_host:
+        description: "S3 host (e.g. s3.fr1.next.ink). Leave blank for AWS S3. (source_type: s3)"
+        required: false
+        default: ""
+        type: string
+      http_url:
+        description: "Full HTTPS/HTTP URL of the qcow2 base image (source_type: http)"
+        required: false
+        type: string
+      http_username:
+        description: "Basic auth username. Password is read from the HTTP_PASSWORD secret. (source_type: http, optional)"
+        required: false
+        type: string
+      artifactory_url:
+        description: "Full HTTPS URL of the artifact in Artifactory (source_type: artifactory)"
+        required: false
         type: string
       image_filename:
         description: "Local filename to save the image as"
         required: true
         default: seapath-debian.qcow2
-        type: string
-      s3_host:
-        description: "S3 host (e.g. s3.fr1.next.ink). Leave blank for AWS S3."
-        required: false
-        default: ""
         type: string
       ansible_repo:
         description: "SEAPATH Ansible repo URL to clone"
@@ -123,6 +144,7 @@ jobs:
           sudo virsh pool-list --all
 
       - name: Fetch base image from S3
+        if: inputs.source_type == 's3'
         env:
           ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
           SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -141,6 +163,37 @@ jobs:
             --secret_key="$SECRET_KEY" \
             "${host_args[@]}"
           sudo chmod a+r "images/$IMAGE_FILENAME"
+
+      - name: Fetch base image via HTTP
+        if: inputs.source_type == 'http'
+        env:
+          URL: ${{ inputs.http_url }}
+          FILENAME: ${{ inputs.image_filename }}
+          HTTP_USERNAME: ${{ inputs.http_username }}
+          HTTP_PASSWORD: ${{ secrets.HTTP_PASSWORD || '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p images
+          auth_args=()
+          if [ -n "${HTTP_USERNAME:-}" ] && [ -n "${HTTP_PASSWORD:-}" ]; then
+            auth_args=(-u "${HTTP_USERNAME}:${HTTP_PASSWORD}")
+          fi
+          curl -fSL --retry 3 -o "images/$FILENAME" "${auth_args[@]}" "$URL"
+          sudo chmod a+r "images/$FILENAME"
+
+      - name: Fetch base image from Artifactory
+        if: inputs.source_type == 'artifactory'
+        env:
+          URL: ${{ inputs.artifactory_url }}
+          API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
+          FILENAME: ${{ inputs.image_filename }}
+        run: |
+          set -euo pipefail
+          mkdir -p images
+          curl -fSL --retry 3 \
+            -H "X-JFrog-Art-Api: $API_KEY" \
+            -o "images/$FILENAME" "$URL"
+          sudo chmod a+r "images/$FILENAME"
 
       - name: Write terraform.tfvars
         run: |
